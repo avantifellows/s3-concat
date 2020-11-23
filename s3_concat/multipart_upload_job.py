@@ -1,5 +1,7 @@
 import logging
 from .utils import _threads, _chunk_by_size, MIN_S3_SIZE
+import json
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -99,11 +101,19 @@ class MultipartUploadJob:
             small_parts = []
             for p in part[1]:
                 try:
-                    small_parts.append(
-                        s3.get_object(
+                    obj = s3.get_object(
                             Bucket=self.bucket,
                             Key=p[0]
-                        )['Body'].read()
+                        )
+                    last_modified = obj['LastModified'].strftime("%Y-%m-%d %H:%M:%S")
+                    key = p[0].strip()
+                    small_parts.append(
+                        {
+                            "last_modified": last_modified,
+                            "key": key,
+                            "response": obj['Body'].read().decode('utf-8')
+                        }
+
                     )
                 except Exception as e:
                     logger.critical(
@@ -111,7 +121,7 @@ class MultipartUploadJob:
                     raise
 
             if len(small_parts) > 0:
-                last_part = b''.join(small_parts)
+                last_part = json.dumps(small_parts)
 
                 small_parts = None  # cleanup
                 resp = s3.upload_part(Bucket=self.bucket,
