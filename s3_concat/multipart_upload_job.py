@@ -101,6 +101,7 @@ class MultipartUploadJob:
             small_parts = []
             for p in part[1]:
                 try:
+                    # Get object from S3
                     obj = s3.get_object(
                             Bucket=self.bucket,
                             Key=p[0]
